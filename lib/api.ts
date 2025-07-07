@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Types
 export interface User {
@@ -29,7 +29,7 @@ export interface ExpensesResponse {
     page: number;
     limit: number;
     total: number;
-    pages: number;
+    totalPages: number;
   };
 }
 
@@ -61,47 +61,78 @@ export interface Category {
 interface BackendResponse<T> {
   success: boolean;
   message?: string;
+  data?: T;
 }
 
 interface AuthBackendResponse extends BackendResponse<AuthResponse> {
-  user: User;
-  token: string;
+  data: {
+    user: User;
+    token: string;
+  };
 }
 
 interface ExpensesBackendResponse extends BackendResponse<ExpensesResponse> {
-  expenses: Expense[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
+  data: {
+    expenses: Expense[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   };
 }
 
 interface ExpenseBackendResponse extends BackendResponse<Expense> {
-  expense: Expense;
+  data: Expense;
 }
 
 interface CategoriesBackendResponse extends BackendResponse<Category[]> {
-  categories: Category[];
+  data: Category[];
+}
+
+interface CategoryBackendResponse extends BackendResponse<Category> {
+  data: Category;
 }
 
 interface StatsBackendResponse extends BackendResponse<ExpenseStats> {
-  total: {
-    totalAmount: number;
-    totalCount: number;
-    avgAmount: number;
+  data: {
+    total: {
+      totalAmount: number;
+      totalCount: number;
+      avgAmount: number;
+    };
+    categories: Array<{
+      _id: string;
+      totalAmount: number;
+      count: number;
+    }>;
   };
-  categories: Array<{
-    _id: string;
-    totalAmount: number;
-    count: number;
-  }>;
 }
 
 interface MessageBackendResponse extends BackendResponse<{ message: string }> {
   message: string;
 }
+
+// Helper function to safely access localStorage
+const getLocalStorage = (key: string): string | null => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    return window.localStorage.getItem(key);
+  }
+  return null;
+};
+
+const setLocalStorage = (key: string, value: string): void => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    window.localStorage.setItem(key, value);
+  }
+};
+
+const removeLocalStorage = (key: string): void => {
+  if (typeof window !== "undefined" && window.localStorage) {
+    window.localStorage.removeItem(key);
+  }
+};
 
 // API Client Class
 class ApiClient {
@@ -111,23 +142,17 @@ class ApiClient {
   constructor(baseURL: string) {
     this.baseURL = baseURL;
     // Get token from localStorage on client side
-    if (typeof window !== "undefined") {
-      this.token = localStorage.getItem("auth_token");
-    }
+    this.token = getLocalStorage("auth_token");
   }
 
   setToken(token: string) {
     this.token = token;
-    if (typeof window !== "undefined") {
-      localStorage.setItem("auth_token", token);
-    }
+    setLocalStorage("auth_token", token);
   }
 
   clearToken() {
     this.token = null;
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token");
-    }
+    removeLocalStorage("auth_token");
   }
 
   private async request<T>(
@@ -185,7 +210,7 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    return { user: response.user, token: response.token };
+    return response.data!;
   }
 
   async login(data: {
@@ -196,7 +221,7 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    return { user: response.user, token: response.token };
+    return response.data!;
   }
 
   // Expense endpoints
@@ -208,21 +233,24 @@ class ApiClient {
     maxAmount?: number;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: string;
   }): Promise<ExpensesResponse> {
     const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
 
-    const query = searchParams.toString();
-    const response = await this.request<ExpensesBackendResponse>(
-      `/expenses${query ? `?${query}` : ""}`
-    );
-    return { expenses: response.expenses, pagination: response.pagination };
+    if (params?.category) searchParams.append("category", params.category);
+    if (params?.startDate) searchParams.append("startDate", params.startDate);
+    if (params?.endDate) searchParams.append("endDate", params.endDate);
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.sortBy) searchParams.append("sortBy", params.sortBy);
+    if (params?.sortOrder) searchParams.append("sortOrder", params.sortOrder);
+
+    const queryString = searchParams.toString();
+    const endpoint = `/expenses${queryString ? `?${queryString}` : ""}`;
+
+    const response = await this.request<ExpensesBackendResponse>(endpoint);
+    return response.data!;
   }
 
   async createExpense(data: {
@@ -235,7 +263,7 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
-    return response.expense;
+    return response.data!;
   }
 
   async updateExpense(
@@ -250,11 +278,11 @@ class ApiClient {
     const response = await this.request<ExpenseBackendResponse>(
       `/expenses/${id}`,
       {
-        method: "PATCH",
+        method: "PUT",
         body: JSON.stringify(data),
       }
     );
-    return response.expense;
+    return response.data!;
   }
 
   async deleteExpense(id: string): Promise<{ message: string }> {
@@ -264,7 +292,7 @@ class ApiClient {
         method: "DELETE",
       }
     );
-    return { message: response.message };
+    return { message: response.message! };
   }
 
   async getExpenseStats(
@@ -275,11 +303,11 @@ class ApiClient {
     if (startDate) searchParams.append("startDate", startDate);
     if (endDate) searchParams.append("endDate", endDate);
 
-    const query = searchParams.toString();
-    const response = await this.request<StatsBackendResponse>(
-      `/expenses/stats${query ? `?${query}` : ""}`
-    );
-    return { total: response.total, categories: response.categories };
+    const queryString = searchParams.toString();
+    const endpoint = `/expenses/stats${queryString ? `?${queryString}` : ""}`;
+
+    const response = await this.request<StatsBackendResponse>(endpoint);
+    return response.data!;
   }
 
   // Category endpoints
@@ -287,8 +315,52 @@ class ApiClient {
     const response = await this.request<CategoriesBackendResponse>(
       "/categories"
     );
-    return response.categories;
+    return response.data!;
+  }
+
+  async createCategory(data: {
+    name: string;
+    description?: string;
+    color?: string;
+  }): Promise<Category> {
+    const response = await this.request<CategoryBackendResponse>(
+      "/categories",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+    return response.data!;
+  }
+
+  async updateCategory(
+    id: string,
+    data: Partial<{
+      name: string;
+      description: string;
+      color: string;
+    }>
+  ): Promise<Category> {
+    const response = await this.request<CategoryBackendResponse>(
+      `/categories/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }
+    );
+    return response.data!;
+  }
+
+  async deleteCategory(id: string): Promise<{ message: string }> {
+    const response = await this.request<MessageBackendResponse>(
+      `/categories/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return { message: response.message! };
   }
 }
 
+// Export singleton instance
 export const apiClient = new ApiClient(API_BASE_URL);

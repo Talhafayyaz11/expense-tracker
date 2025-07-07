@@ -1,13 +1,13 @@
-import mongoose, { type Document, Schema } from "mongoose"
+import mongoose, { type Document, Schema } from "mongoose";
 
 export interface ICategory extends Document {
-  name: string
-  description?: string
-  color: string
-  userId: mongoose.Types.ObjectId
-  isDefault: boolean
-  createdAt: Date
-  updatedAt: Date
+  name: string;
+  description?: string;
+  color: string;
+  userId: mongoose.Types.ObjectId;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const CategorySchema = new Schema<ICategory>(
@@ -26,7 +26,10 @@ const CategorySchema = new Schema<ICategory>(
     color: {
       type: String,
       default: "#3b82f6",
-      match: [/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, "Please enter a valid hex color"],
+      match: [
+        /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/,
+        "Please enter a valid hex color",
+      ],
     },
     userId: {
       type: Schema.Types.ObjectId,
@@ -42,14 +45,15 @@ const CategorySchema = new Schema<ICategory>(
     timestamps: true,
     toJSON: {
       transform: (doc, ret) => {
-        delete ret.__v
-        return ret
+        delete ret.__v;
+        return ret;
       },
     },
-  },
-)
+  }
+);
 
 // Compound index to ensure unique category names per user
-CategorySchema.index({ userId: 1, name: 1 }, { unique: true })
+CategorySchema.index({ userId: 1, name: 1 }, { unique: true });
 
-export default mongoose.model<ICategory>("Category", CategorySchema)
+export default mongoose.models.Category ||
+  mongoose.model<ICategory>("Category", CategorySchema);

@@ -11,6 +11,8 @@ export function useExpenses(params?: {
   maxAmount?: number;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: string;
 }) {
   const [data, setData] = useState<ExpensesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +41,8 @@ export function useExpenses(params?: {
     params?.maxAmount,
     params?.page,
     params?.limit,
+    params?.sortBy,
+    params?.sortOrder,
   ]);
 
   const createExpense = async (expenseData: {

@@ -1,13 +1,13 @@
-import mongoose, { type Document, Schema } from "mongoose"
+import mongoose, { type Document, Schema } from "mongoose";
 
 export interface IExpense extends Document {
-  amount: number
-  category: string
-  note?: string
-  date: Date
-  userId: mongoose.Types.ObjectId
-  createdAt: Date
-  updatedAt: Date
+  amount: number;
+  category: string;
+  note?: string;
+  date: Date;
+  userId: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ExpenseSchema = new Schema<IExpense>(
@@ -55,16 +55,17 @@ const ExpenseSchema = new Schema<IExpense>(
     timestamps: true,
     toJSON: {
       transform: (doc, ret) => {
-        delete ret.__v
-        return ret
+        delete ret.__v;
+        return ret;
       },
     },
-  },
-)
+  }
+);
 
 // Indexes for better query performance
-ExpenseSchema.index({ userId: 1, date: -1 })
-ExpenseSchema.index({ userId: 1, category: 1 })
-ExpenseSchema.index({ userId: 1, createdAt: -1 })
+ExpenseSchema.index({ userId: 1, date: -1 });
+ExpenseSchema.index({ userId: 1, category: 1 });
+ExpenseSchema.index({ userId: 1, createdAt: -1 });
 
-export default mongoose.model<IExpense>("Expense", ExpenseSchema)
+export default mongoose.models.Expense ||
+  mongoose.model<IExpense>("Expense", ExpenseSchema);

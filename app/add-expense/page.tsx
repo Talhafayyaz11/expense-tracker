@@ -40,8 +40,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCategories } from "@/hooks/use-categories";
 import { useExpenses } from "@/hooks/use-expenses";
+import { ProtectedRoute } from "@/components/protected-route";
 
-export default function AddExpense() {
+function AddExpenseContent() {
   const router = useRouter();
   const { categories } = useCategories();
   const { createExpense } = useExpenses();
@@ -153,7 +154,9 @@ export default function AddExpense() {
                         step="0.01"
                         placeholder="0.00"
                         value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        onChange={(e) =>
+                          setAmount((e.target as HTMLInputElement).value)
+                        }
                         className="pl-10"
                         required
                         disabled={isLoading}
@@ -206,11 +209,14 @@ export default function AddExpense() {
                           {date ? format(date, "PPP") : "Pick a date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                      <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
                           selected={date}
-                          onSelect={setDate}
+                          onSelect={(newDate) => newDate && setDate(newDate)}
+                          disabled={(date) =>
+                            date > new Date() || date < new Date("1900-01-01")
+                          }
                           initialFocus
                         />
                       </PopoverContent>
@@ -219,97 +225,97 @@ export default function AddExpense() {
 
                   {/* Note */}
                   <div className="space-y-2">
-                    <Label htmlFor="note">Note</Label>
+                    <Label htmlFor="note">Note (Optional)</Label>
                     <Textarea
                       id="note"
-                      placeholder="Add a note about this expense (optional)"
+                      placeholder="Add a note about this expense..."
                       value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                      rows={3}
+                      onChange={(e) =>
+                        setNote((e.target as HTMLTextAreaElement).value)
+                      }
                       disabled={isLoading}
+                      rows={3}
                     />
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex gap-4">
-                    <Button
-                      type="submit"
-                      disabled={!isFormValid || isLoading}
-                      className="flex-1"
-                    >
-                      {isLoading ? "Adding..." : "Add Expense"}
-                    </Button>
-                    <Link href="/dashboard">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={isLoading}
-                      >
-                        Cancel
-                      </Button>
-                    </Link>
-                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!isFormValid || isLoading}
+                  >
+                    {isLoading ? "Adding Expense..." : "Add Expense"}
+                  </Button>
                 </form>
               </CardContent>
             </Card>
           </div>
 
-          {/* Preview */}
+          {/* Tips */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Preview</CardTitle>
-                <CardDescription>How your expense will appear</CardDescription>
+                <CardTitle>Tips</CardTitle>
+                <CardDescription>
+                  Make the most of your expense tracking
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Amount:</span>
-                    <span className="font-semibold">
-                      {amount
-                        ? `$${Number.parseFloat(amount).toFixed(2)}`
-                        : "$0.00"}
-                    </span>
+              <CardContent className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-medium">Be Specific</p>
+                    <p className="text-xs text-gray-600">
+                      Use detailed notes to remember what the expense was for
+                    </p>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Category:</span>
-                    <span className="font-medium">
-                      {category || "Not selected"}
-                    </span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-medium">Choose Categories</p>
+                    <p className="text-xs text-gray-600">
+                      Select the most appropriate category for better
+                      organization
+                    </p>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Date:</span>
-                    <span className="font-medium">
-                      {date ? format(date, "MMM dd, yyyy") : "Not selected"}
-                    </span>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-medium">Regular Updates</p>
+                    <p className="text-xs text-gray-600">
+                      Add expenses regularly to keep your records accurate
+                    </p>
                   </div>
-                  {note && (
-                    <div className="pt-2 border-t">
-                      <span className="text-sm text-gray-600">Note:</span>
-                      <p className="text-sm mt-1">{note}</p>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Tips */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Tips</CardTitle>
+                <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent>
-                <ul className="text-sm space-y-2 text-gray-600">
-                  <li>• Be specific with your notes for better tracking</li>
-                  <li>• Choose the most appropriate category</li>
-                  <li>• Double-check the amount before saving</li>
-                  <li>• Set the correct date for accurate reporting</li>
-                </ul>
+              <CardContent className="space-y-3">
+                <Link href="/dashboard">
+                  <Button variant="outline" className="w-full justify-start">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AddExpense() {
+  return (
+    <ProtectedRoute>
+      <AddExpenseContent />
+    </ProtectedRoute>
   );
 }

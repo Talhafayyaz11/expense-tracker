@@ -47,6 +47,7 @@ import {
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { SmoothLoading, SmoothLoadingCard } from "@/components/smooth-loading";
 import { useToast } from "@/hooks/use-toast";
+import { ProtectedRoute } from "@/components/protected-route";
 
 const categoryColors = {
   Food: "bg-orange-100 text-orange-800",
@@ -60,7 +61,7 @@ const categoryColors = {
   Other: "bg-gray-100 text-gray-800",
 };
 
-export default function Dashboard() {
+function DashboardContent() {
   const { user, logout } = useAuth();
   const { categories } = useCategories();
   const { toast } = useToast();
@@ -208,14 +209,14 @@ export default function Dashboard() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex items-center justify-between py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back, {user?.name}!
-              </h1>
-              <p className="text-gray-600">Track and manage your expenses</p>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600">
+                Welcome back, {user?.name}! Here's your expense overview.
+              </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-4">
               <Link href="/add-expense">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -232,7 +233,7 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error Messages */}
+        {/* Error Display */}
         {(expensesError || statsError) && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -241,8 +242,8 @@ export default function Dashboard() {
         )}
 
         {/* Summary Cards */}
-        <SmoothLoadingCard isLoading={isUpdatingExpense || isDeletingExpense}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <SmoothLoadingCard isLoading={statsLoading}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
@@ -252,143 +253,137 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(stats?.total.totalAmount || 0)}
+                  {stats?.total?.totalAmount
+                    ? formatCurrency(stats.total.totalAmount)
+                    : "$0.00"}
                 </div>
-                <p className="text-xs text-muted-foreground">{selectedMonth}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.total?.totalCount || 0} transactions
+                </p>
               </CardContent>
             </Card>
+          </SmoothLoadingCard>
 
+          <SmoothLoadingCard isLoading={statsLoading}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Transactions
+                  Average Expense
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {stats?.total.totalCount || 0}
+                  {stats?.total?.avgAmount
+                    ? formatCurrency(stats.total.avgAmount)
+                    : "$0.00"}
                 </div>
-                <p className="text-xs text-muted-foreground">This month</p>
+                <p className="text-xs text-muted-foreground">Per transaction</p>
               </CardContent>
             </Card>
+          </SmoothLoadingCard>
 
+          <SmoothLoadingCard isLoading={statsLoading}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Average per Transaction
+                  Categories Used
                 </CardTitle>
                 <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(stats?.total.avgAmount || 0)}
+                  {stats?.categories?.length || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">Average amount</p>
+                <p className="text-xs text-muted-foreground">
+                  Different categories
+                </p>
               </CardContent>
             </Card>
-          </div>
-        </SmoothLoadingCard>
+          </SmoothLoadingCard>
+
+          <SmoothLoadingCard isLoading={expensesLoading}>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  This Month
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{expenses.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Expenses recorded
+                </p>
+              </CardContent>
+            </Card>
+          </SmoothLoadingCard>
+        </div>
 
         {/* Charts */}
-        <SmoothLoadingCard isLoading={isUpdatingExpense || isDeletingExpense}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <SmoothLoadingCard isLoading={statsLoading}>
             <Card>
               <CardHeader>
                 <CardTitle>Expense Trends</CardTitle>
-                <CardDescription>Daily expense tracking</CardDescription>
+                <CardDescription>
+                  Your spending patterns over time
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ExpenseChart expenses={expenses} />
               </CardContent>
             </Card>
+          </SmoothLoadingCard>
 
+          <SmoothLoadingCard isLoading={statsLoading}>
             <Card>
               <CardHeader>
                 <CardTitle>Category Breakdown</CardTitle>
-                <CardDescription>Expenses by category</CardDescription>
+                <CardDescription>Spending by category</CardDescription>
               </CardHeader>
               <CardContent>
                 <CategoryChart categories={stats?.categories || []} />
               </CardContent>
             </Card>
-          </div>
-        </SmoothLoadingCard>
-
-        {/* Category Summary */}
-        {stats?.categories && stats.categories.length > 0 && (
-          <SmoothLoadingCard isLoading={isUpdatingExpense || isDeletingExpense}>
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle>Category Summary</CardTitle>
-                <CardDescription>
-                  Breakdown of expenses by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {stats?.categories?.map((category) => (
-                    <div
-                      key={category._id}
-                      className="text-center p-4 bg-gray-50 rounded-lg"
-                    >
-                      <div className="text-lg font-semibold">
-                        {formatCurrency(category.totalAmount)}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {category._id}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {(
-                          (category.totalAmount /
-                            (stats.total.totalAmount || 1)) *
-                          100
-                        ).toFixed(1)}
-                        % of total
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </SmoothLoadingCard>
-        )}
+        </div>
 
-        {/* Recent Expenses */}
-        <SmoothLoadingCard isLoading={expensesLoading}>
+        {/* Filters and Expenses Table */}
+        <div className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Recent Expenses</CardTitle>
-                <CardDescription>Your latest transactions</CardDescription>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Expenses</CardTitle>
+                  <CardDescription>
+                    Your latest expense transactions
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                </Button>
               </div>
-              <ExpenseFilters
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                categories={categoryNames}
-                isLoading={expensesLoading}
-              />
             </CardHeader>
             <CardContent>
-              {expenses.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No expenses found for this period.
-                  </p>
-                  <Link href="/add-expense">
-                    <Button className="mt-4">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Expense
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
+              <ExpenseFilters
+                categories={categoryNames}
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+              />
+            </CardContent>
+          </Card>
+
+          <SmoothLoadingCard isLoading={expensesLoading}>
+            <Card>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Category</TableHead>
-                      <TableHead>Description</TableHead>
+                      <TableHead>Note</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -396,34 +391,30 @@ export default function Dashboard() {
                   <TableBody>
                     {expenses.map((expense) => (
                       <TableRow key={expense._id}>
-                        <TableCell className="font-medium">
-                          {formatDate(expense.date)}
-                        </TableCell>
+                        <TableCell>{formatDate(expense.date)}</TableCell>
                         <TableCell>
                           <Badge
-                            variant="secondary"
                             className={
                               categoryColors[
                                 expense.category as keyof typeof categoryColors
-                              ] || categoryColors.Other
+                              ] || "bg-gray-100 text-gray-800"
                             }
                           >
                             {expense.category}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          {expense.note || "No description"}
+                        <TableCell className="max-w-xs truncate">
+                          {expense.note || "-"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(expense.amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex items-center justify-end space-x-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEditExpense(expense)}
-                              disabled={isUpdatingExpense || isDeletingExpense}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -431,8 +422,6 @@ export default function Dashboard() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteExpense(expense)}
-                              className="text-red-600 hover:text-red-700"
-                              disabled={isUpdatingExpense || isDeletingExpense}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -442,32 +431,40 @@ export default function Dashboard() {
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
-        </SmoothLoadingCard>
-
-        {/* Edit Expense Dialog */}
-        <EditExpenseDialog
-          expense={editingExpense}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onUpdateExpense={handleUpdateExpense}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <DeleteConfirmationDialog
-          open={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          onConfirm={confirmDeleteExpense}
-          title="Delete Expense"
-          description={`Are you sure you want to delete the expense "${
-            deletingExpense?.note ||
-            `${deletingExpense?.category} - $${deletingExpense?.amount}`
-          }"? This action cannot be undone.`}
-          isLoading={isDeletingExpense}
-        />
+              </CardContent>
+            </Card>
+          </SmoothLoadingCard>
+        </div>
       </div>
+
+      {/* Dialogs */}
+      <EditExpenseDialog
+        expense={editingExpense}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onUpdateExpense={handleUpdateExpense}
+      />
+
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={confirmDeleteExpense}
+        title="Delete Expense"
+        description={`Are you sure you want to delete the expense "${
+          deletingExpense?.note || deletingExpense?.category
+        }" for ${
+          deletingExpense ? formatCurrency(deletingExpense.amount) : ""
+        }?`}
+        isLoading={isDeletingExpense}
+      />
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }
