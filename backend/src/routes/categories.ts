@@ -36,16 +36,18 @@ router.use(authenticate);
  */
 router.get(
   "/",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const categories = await Category.find({ userId: req.user!._id }).sort({
-      name: 1,
-    });
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const categories = await Category.find({ userId: req.user!._id }).sort({
+        name: 1,
+      });
 
-    res.json({
-      success: true,
-      categories,
-    });
-  })
+      res.json({
+        success: true,
+        categories,
+      });
+    }
+  )
 );
 
 /**
@@ -83,24 +85,26 @@ router.get(
  */
 router.get(
   "/:id",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const category = await Category.findOne({
-      _id: req.params.id,
-      userId: req.user!._id,
-    });
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const category = await Category.findOne({
+        _id: req.params.id,
+        userId: req.user!._id,
+      });
 
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
+      if (!category) {
+        return res.status(404).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        category,
       });
     }
-
-    res.json({
-      success: true,
-      category,
-    });
-  })
+  )
 );
 
 export default router;

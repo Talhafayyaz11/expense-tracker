@@ -1,75 +1,85 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { apiClient, type ExpensesResponse, type ExpenseStats } from "@/lib/api"
+import { useState, useEffect } from "react";
+import { apiClient, type ExpensesResponse, type ExpenseStats } from "@/lib/api";
 
 export function useExpenses(params?: {
-  category?: string
-  startDate?: string
-  endDate?: string
-  page?: number
-  limit?: number
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  page?: number;
+  limit?: number;
 }) {
-  const [data, setData] = useState<ExpensesResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState<ExpensesResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchExpenses = async () => {
     try {
-      setIsLoading(true)
-      setError(null)
-      const response = await apiClient.getExpenses(params)
-      setData(response)
+      setIsLoading(true);
+      setError(null);
+      const response = await apiClient.getExpenses(params);
+      setData(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch expenses")
+      setError(err instanceof Error ? err.message : "Failed to fetch expenses");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchExpenses()
-  }, [params?.category, params?.startDate, params?.endDate, params?.page, params?.limit])
+    fetchExpenses();
+  }, [
+    params?.category,
+    params?.startDate,
+    params?.endDate,
+    params?.minAmount,
+    params?.maxAmount,
+    params?.page,
+    params?.limit,
+  ]);
 
   const createExpense = async (expenseData: {
-    amount: number
-    category: string
-    note?: string
-    date: string
+    amount: number;
+    category: string;
+    note?: string;
+    date: string;
   }) => {
     try {
-      await apiClient.createExpense(expenseData)
-      await fetchExpenses() // Refresh the list
+      await apiClient.createExpense(expenseData);
+      await fetchExpenses(); // Refresh the list
     } catch (err) {
-      throw err
+      throw err;
     }
-  }
+  };
 
   const updateExpense = async (
     id: string,
     expenseData: Partial<{
-      amount: number
-      category: string
-      note?: string
-      date: string
-    }>,
+      amount: number;
+      category: string;
+      note?: string;
+      date: string;
+    }>
   ) => {
     try {
-      await apiClient.updateExpense(id, expenseData)
-      await fetchExpenses() // Refresh the list
+      await apiClient.updateExpense(id, expenseData);
+      await fetchExpenses(); // Refresh the list
     } catch (err) {
-      throw err
+      throw err;
     }
-  }
+  };
 
   const deleteExpense = async (id: string) => {
     try {
-      await apiClient.deleteExpense(id)
-      await fetchExpenses() // Refresh the list
+      await apiClient.deleteExpense(id);
+      await fetchExpenses(); // Refresh the list
     } catch (err) {
-      throw err
+      throw err;
     }
-  }
+  };
 
   return {
     expenses: data?.expenses || [],
@@ -80,30 +90,30 @@ export function useExpenses(params?: {
     createExpense,
     updateExpense,
     deleteExpense,
-  }
+  };
 }
 
 export function useExpenseStats(startDate?: string, endDate?: string) {
-  const [stats, setStats] = useState<ExpenseStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<ExpenseStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await apiClient.getExpenseStats(startDate, endDate);
+      setStats(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch stats");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const response = await apiClient.getExpenseStats(startDate, endDate)
-        setStats(response)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch stats")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+    fetchStats();
+  }, [startDate, endDate]);
 
-    fetchStats()
-  }, [startDate, endDate])
-
-  return { stats, isLoading, error }
+  return { stats, isLoading, error, refetch: fetchStats };
 }

@@ -92,3 +92,17 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .smooth-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .smooth-opacity {
+    @apply transition-opacity duration-200 ease-in-out;
+  }
+  
+  .smooth-transform {
+    @apply transition-transform duration-200 ease-in-out;
+  }
+}

@@ -1,13 +1,18 @@
-import express from "express"
-import Expense from "../models/Expense"
-import { authenticate, type AuthRequest } from "../middleware/auth"
-import { validate, expenseSchema, updateExpenseSchema, queryExpensesSchema } from "../middleware/validation"
-import { asyncHandler } from "../middleware/errorHandler"
+import express from "express";
+import Expense from "../models/Expense";
+import { authenticate, type AuthRequest } from "../middleware/auth";
+import {
+  validate,
+  expenseSchema,
+  updateExpenseSchema,
+  queryExpensesSchema,
+} from "../middleware/validation";
+import { asyncHandler } from "../middleware/errorHandler";
 
-const router = express.Router()
+const router = express.Router();
 
 // Apply authentication to all routes
-router.use(authenticate)
+router.use(authenticate);
 
 /**
  * @swagger
@@ -69,14 +74,14 @@ router.post(
     const expense = await Expense.create({
       ...req.body,
       userId: req.user!._id,
-    })
+    });
 
     res.status(201).json({
       success: true,
       expense,
-    })
-  }),
-)
+    });
+  })
+);
 
 /**
  * @swagger
@@ -155,50 +160,66 @@ router.post(
  */
 router.get(
   "/",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const { error, value } = queryExpensesSchema.validate(req.query)
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation error",
-        details: error.details.map((detail) => detail.message),
-      })
-    }
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const { error, value } = queryExpensesSchema.validate(req.query);
+      if (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation error",
+          details: error.details.map((detail) => detail.message),
+        });
+      }
 
-    const { category, startDate, endDate, page, limit } = value
-
-    // Build filter
-    const filter: any = { userId: req.user!._id }
-
-    if (category) {
-      filter.category = category
-    }
-
-    if (startDate || endDate) {
-      filter.date = {}
-      if (startDate) filter.date.$gte = new Date(startDate)
-      if (endDate) filter.date.$lte = new Date(endDate)
-    }
-
-    const skip = (page - 1) * limit
-
-    const [expenses, total] = await Promise.all([
-      Expense.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
-      Expense.countDocuments(filter),
-    ])
-
-    res.json({
-      success: true,
-      expenses,
-      pagination: {
+      const {
+        category,
+        startDate,
+        endDate,
+        minAmount,
+        maxAmount,
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    })
-  }),
-)
+      } = value;
+
+      // Build filter
+      const filter: any = { userId: req.user!._id };
+
+      if (category) {
+        filter.category = category;
+      }
+
+      if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = new Date(startDate);
+        if (endDate) filter.date.$lte = new Date(endDate);
+      }
+
+      if (minAmount || maxAmount) {
+        filter.amount = {};
+        if (minAmount) filter.amount.$gte = minAmount;
+        if (maxAmount) filter.amount.$lte = maxAmount;
+      }
+
+      const skip = (page - 1) * limit;
+
+      const [expenses, total] = await Promise.all([
+        Expense.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
+        Expense.countDocuments(filter),
+      ]);
+
+      res.json({
+        success: true,
+        expenses,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      });
+    }
+  )
+);
 
 /**
  * @swagger
@@ -263,50 +284,52 @@ router.get(
  */
 router.get(
   "/stats",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const { startDate, endDate } = req.query
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const { startDate, endDate } = req.query;
 
-    // Build filter
-    const filter: any = { userId: req.user!._id }
+      // Build filter
+      const filter: any = { userId: req.user!._id };
 
-    if (startDate || endDate) {
-      filter.date = {}
-      if (startDate) filter.date.$gte = new Date(startDate as string)
-      if (endDate) filter.date.$lte = new Date(endDate as string)
+      if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = new Date(startDate as string);
+        if (endDate) filter.date.$lte = new Date(endDate as string);
+      }
+
+      const [totalStats, categoryStats] = await Promise.all([
+        Expense.aggregate([
+          { $match: filter },
+          {
+            $group: {
+              _id: null,
+              totalAmount: { $sum: "$amount" },
+              totalCount: { $sum: 1 },
+              avgAmount: { $avg: "$amount" },
+            },
+          },
+        ]),
+        Expense.aggregate([
+          { $match: filter },
+          {
+            $group: {
+              _id: "$category",
+              totalAmount: { $sum: "$amount" },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { totalAmount: -1 } },
+        ]),
+      ]);
+
+      res.json({
+        success: true,
+        total: totalStats[0] || { totalAmount: 0, totalCount: 0, avgAmount: 0 },
+        categories: categoryStats,
+      });
     }
-
-    const [totalStats, categoryStats] = await Promise.all([
-      Expense.aggregate([
-        { $match: filter },
-        {
-          $group: {
-            _id: null,
-            totalAmount: { $sum: "$amount" },
-            totalCount: { $sum: 1 },
-            avgAmount: { $avg: "$amount" },
-          },
-        },
-      ]),
-      Expense.aggregate([
-        { $match: filter },
-        {
-          $group: {
-            _id: "$category",
-            totalAmount: { $sum: "$amount" },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { totalAmount: -1 } },
-      ]),
-    ])
-
-    res.json({
-      success: true,
-      total: totalStats[0] || { totalAmount: 0, totalCount: 0, avgAmount: 0 },
-      categories: categoryStats,
-    })
-  }),
-)
+  )
+);
 
 /**
  * @swagger
@@ -343,22 +366,27 @@ router.get(
  */
 router.get(
   "/:id",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const expense = await Expense.findOne({ _id: req.params.id, userId: req.user!._id })
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const expense = await Expense.findOne({
+        _id: req.params.id,
+        userId: req.user!._id,
+      });
 
-    if (!expense) {
-      return res.status(404).json({
-        success: false,
-        message: "Expense not found",
-      })
+      if (!expense) {
+        return res.status(404).json({
+          success: false,
+          message: "Expense not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        expense,
+      });
     }
-
-    res.json({
-      success: true,
-      expense,
-    })
-  }),
-)
+  )
+);
 
 /**
  * @swagger
@@ -421,25 +449,31 @@ router.get(
 router.patch(
   "/:id",
   validate(updateExpenseSchema),
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const expense = await Expense.findOneAndUpdate({ _id: req.params.id, userId: req.user!._id }, req.body, {
-      new: true,
-      runValidators: true,
-    })
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const expense = await Expense.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user!._id },
+        req.body,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
 
-    if (!expense) {
-      return res.status(404).json({
-        success: false,
-        message: "Expense not found",
-      })
+      if (!expense) {
+        return res.status(404).json({
+          success: false,
+          message: "Expense not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        expense,
+      });
     }
-
-    res.json({
-      success: true,
-      expense,
-    })
-  }),
-)
+  )
+);
 
 /**
  * @swagger
@@ -477,21 +511,26 @@ router.patch(
  */
 router.delete(
   "/:id",
-  asyncHandler(async (req: AuthRequest, res: express.Response) => {
-    const expense = await Expense.findOneAndDelete({ _id: req.params.id, userId: req.user!._id })
+  asyncHandler(
+    async (req: AuthRequest, res: express.Response): Promise<any> => {
+      const expense = await Expense.findOneAndDelete({
+        _id: req.params.id,
+        userId: req.user!._id,
+      });
 
-    if (!expense) {
-      return res.status(404).json({
-        success: false,
-        message: "Expense not found",
-      })
+      if (!expense) {
+        return res.status(404).json({
+          success: false,
+          message: "Expense not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Expense deleted successfully",
+      });
     }
+  )
+);
 
-    res.json({
-      success: true,
-      message: "Expense deleted successfully",
-    })
-  }),
-)
-
-export default router
+export default router;

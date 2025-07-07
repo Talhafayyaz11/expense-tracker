@@ -204,6 +204,8 @@ class ApiClient {
     category?: string;
     startDate?: string;
     endDate?: string;
+    minAmount?: number;
+    maxAmount?: number;
     page?: number;
     limit?: number;
   }): Promise<ExpensesResponse> {
