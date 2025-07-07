@@ -1,0 +1,39 @@
+{
+  "examples": {
+    "auth": {
+      "register": {
+        "summary": "Register new user",
+        "value": {
+          "name": "John Doe",
+          "email": "john@example.com",
+          "password": "password123"
+        }
+      },
+      "login": {
+        "summary": "Login existing user",
+        "value": {
+          "email": "john@example.com",
+          "password": "password123"
+        }
+      }
+    },
+    "expenses": {
+      "create": {
+        "summary": "Create new expense",
+        "value": {
+          "amount": 45.99,
+          "category": "Food",
+          "note": "Lunch at restaurant",
+          "date": "2024-01-15T12:30:00.000Z"
+        }
+      },
+      "update": {
+        "summary": "Update existing expense",
+        "value": {
+          "amount": 50.0,
+          "note": "Updated lunch expense"
+        }
+      }
+    }
+  }
+}
