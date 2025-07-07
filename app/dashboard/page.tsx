@@ -360,24 +360,15 @@ function DashboardContent() {
                     Your latest expense transactions
                   </CardDescription>
                 </div>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                </Button>
+                <ExpenseFilters
+                  categories={categoryNames}
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                />
               </div>
             </CardHeader>
-            <CardContent>
-              <ExpenseFilters
-                categories={categoryNames}
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-              />
-            </CardContent>
-          </Card>
-
-          <SmoothLoadingCard isLoading={expensesLoading}>
-            <Card>
-              <CardContent className="p-0">
+            <CardContent className="p-0">
+              <SmoothLoadingCard isLoading={expensesLoading}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -431,9 +422,9 @@ function DashboardContent() {
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </SmoothLoadingCard>
+              </SmoothLoadingCard>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
